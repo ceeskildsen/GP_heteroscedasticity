@@ -35,39 +35,39 @@ The main MATLAB function that implements heteroscedastic GP regression with vari
 
 -`x_test`: Vector of test inputs (m×1).  
 
--Example (Pseudo-Code)  
--matlab  
--Copy  
--% Define or load your data  
--x = [...];     % training inputs  
--y = [...];     % training outputs  
--x_test = [...];% test inputs  
+Example (Pseudo-Code)  
+matlab  
+Copy  
+% Define or load your data  
+x = [...];     % training inputs  
+y = [...];     % training outputs  
+x_test = [...];% test inputs  
 
--% Define your kernel function (example: RBF)  
--kernel = @(X1, X2, theta) rbfKernel(X1, X2, theta);  
+% Define your kernel function (example: RBF)  
+kernel = @(X1, X2, theta) rbfKernel(X1, X2, theta);  
 
--% Run heteroscedastic GP  
+% Run heteroscedastic GP  
 [y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_hat] = ...
     GP_heteroscadiscity(x, y, kernel, x_test);
 
--% Now y_hat is your predictive mean, CI_95 is half-width of 95% confidence intervals, etc.
+% Now y_hat is your predictive mean, CI_95 is half-width of 95% confidence intervals, etc.
 (Make sure you have an appropriate kernel function, such as an RBF kernel, defined in your MATLAB path.)  
 
--Requirements  
--MATLAB (tested on version R2021a or later, but should work on older versions).  
+Requirements  
+MATLAB (tested on version R2021a or later, but should work on older versions).  
 
--Optimization Toolbox (for fmincon) or an equivalent method to minimize the negative log marginal likelihood.  
+Optimization Toolbox (for fmincon) or an equivalent method to minimize the negative log marginal likelihood.  
 
--License  
+License  
 This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). You are free to share and adapt the material under the following terms:
 
--Attribution: You must give appropriate credit, provide a link to the license, and indicate if changes were made.  
+Attribution: You must give appropriate credit, provide a link to the license, and indicate if changes were made.  
 
--NonCommercial: You may not use the material for commercial purposes.  
+NonCommercial: You may not use the material for commercial purposes.  
 
--For the full license text, see: https://creativecommons.org/licenses/by-nc/4.0/  
+For the full license text, see: https://creativecommons.org/licenses/by-nc/4.0/  
 
--Author  
--Carl Emil Aae Eskildsen  
--Imperial College London  
--c.eskildsen@imperial.ac.uk  
+Author  
+Carl Emil Aae Eskildsen  
+Imperial College London  
+c.eskildsen@imperial.ac.uk  
