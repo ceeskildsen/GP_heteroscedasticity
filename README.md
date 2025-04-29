@@ -9,13 +9,12 @@ Train an auxiliary GP on noise variance to ensure strictly positive predictions,
 
 Combine the main GP’s predictive variance with the predicted noise variance for robust confidence intervals.
 
-```markdown
 ### v1.1 (2025-04-29)
 
 - Removed external hyperparameter inputs (`theta0_main`, `theta0_aux`).  
   Now `GP_heteroscadiscity` auto-computes initial guesses from the data.
 - Updated function signature and examples accordingly.
-```
+
 
 Contents
 GP_heteroscadiscity.m
