@@ -9,17 +9,22 @@ Train an auxiliary GP on the log of the noise variance to ensure strictly positi
 
 Combine the main GP’s predictive variance with the predicted noise variance for robust confidence intervals.
 
+```markdown
+### v1.1 (2025-04-29)
+
+- Removed external hyperparameter inputs (`theta0_main`, `theta0_aux`).  
+  Now `GP_heteroscadiscity` auto-computes initial guesses from the data.
+- Updated function signature and examples accordingly.
+
 Contents
 GP_heteroscadiscity.m
 The main MATLAB function that implements heteroscedastic GP regression with log-variance modeling.
 
-Usage
-Call the function as follows:
+**Usage**
 
-matlab
-Copy
+```matlab
 [y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_hat] = ...
-    GP_heteroscadiscity(x, y, kernel, x_test, theta0_main, theta0_aux);
+    GP_heteroscadiscity(x, y, kernel, x_test)
 x: Vector of training inputs (n×1).
 
 y: Vector of training outputs (n×1). Repeated x values indicate replicates.
