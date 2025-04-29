@@ -37,8 +37,7 @@ The main MATLAB function that implements heteroscedastic GP regression with vari
 -`x_test`: Vector of test inputs (m×1).  
 
 Example (Pseudo-Code)  
-matlab  
-Copy  
+```
 % Define or load your data  
 x = [...];     % training inputs  
 y = [...];     % training outputs  
@@ -53,7 +52,7 @@ kernel = @(X1, X2, theta) rbfKernel(X1, X2, theta);
 
 % Now y_hat is your predictive mean, CI_95 is half-width of 95% confidence intervals, etc.
 % (Make sure you have an appropriate kernel function, such as an RBF kernel, defined in your MATLAB path.)  
-...
+```
 
 Requirements  
 MATLAB (tested on version R2021a or later, but should work on older versions).  
