@@ -26,7 +26,9 @@ The main MATLAB function that implements heteroscedastic GP regression with vari
 ```matlab
 [y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_hat] = ...
     GP_heteroscadiscity(x, y, kernel, x_test)
+
 ```
+
 -`x`: Vector of training inputs (n×1).  
 
 `y`: Vector of training outputs (n×1). Repeated x values indicate replicates.  
