@@ -32,4 +32,6 @@ MATLAB R2018a or later. Optimization Toolbox (for fmincon) or equivalent nonline
 Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). You are free to share and adapt the material under the following terms: Attribution — credit the author, provide a link to the license, indicate if changes were made. NonCommercial — you may not use the material for commercial purposes. Full license text available at https://creativecommons.org/licenses/by-nc/4.0
 
 ## Author:
-Carl Emil Aae Eskildsen Imperial College London c.eskildsen@imperial.ac.uk
+-Carl Emil Aae Eskildsen  
+-Imperial College London  
+-c.eskildsen@imperial.ac.uk
