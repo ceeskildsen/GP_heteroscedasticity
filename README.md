@@ -11,8 +11,8 @@ Combine the main GP’s predictive variance with the predicted noise variance fo
 
 ### v1.1 (2025-04-29)
 
-- Removed external hyperparameter inputs (`theta0_main`, `theta0_aux`).  
-  Now `GP_heteroscadiscity` auto-computes initial guesses from the data.
+- Removed external hyperparameter inputs (theta0_main, theta0_aux).  
+  Now GP_heteroscadiscity auto-computes initial guesses from the data.
 - Updated function signature and examples accordingly.
 
 
