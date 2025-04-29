@@ -12,18 +12,18 @@ Call the function in MATLAB as follows:
 ```
 
 ## Inputs: 
--`x` is an n-by-1 vector of training inputs. 
--`y` is an n-by-1 vector of training outputs (replicates allowed). 
--`kernel` is a function handle with syntax kernel(X1, X2, theta). 
--`x_test` is an m-by-1 vector of test inputs.
+-`x` is an n-by-1 vector of training inputs.  
+-`y` is an n-by-1 vector of training outputs (replicates allowed).  
+-`kernel` is a function handle with syntax kernel(X1, X2, theta).  
+-`x_test` is an m-by-1 vector of test inputs.  
 
 ## Outputs: 
--`y_hat` is an m-by-1 predictive mean at test points. 
--`CI_95` is an m-by-1 95 percent confidence interval half-width. 
--`theta_hat` is a 2-by-1 vector of hyperparameters for the main GP (length-scale; signal variance). 
--`aux_theta_hat` is a 3-by-1 vector of hyperparameters for the auxiliary GP (length-scale; signal variance; noise). 
--`sigma_y2` is an n-by-1 vector of estimated noise variances at training points. 
--`sigma_y2_test_hat` is an m-by-1 vector of predicted noise variances at test points.
+-`y_hat` is an m-by-1 predictive mean at test points.  
+-`CI_95` is an m-by-1 95 percent confidence interval half-width.  
+-`theta_hat` is a 2-by-1 vector of hyperparameters for the main GP (length-scale; signal variance).  
+-`aux_theta_hat` is a 3-by-1 vector of hyperparameters for the auxiliary GP (length-scale; signal variance; noise).  
+-`sigma_y2` is an n-by-1 vector of estimated noise variances at training points.  
+-`sigma_y2_test_hat` is an m-by-1 vector of predicted noise variances at test points.  
 
 ## Requirements: 
 MATLAB R2018a or later. Optimization Toolbox (for fmincon) or equivalent nonlinear optimizer.
