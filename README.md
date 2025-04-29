@@ -1,67 +1,60 @@
-GP Heteroscadiscity
-This repository contains a MATLAB function for heteroscedastic Gaussian Process (GP) regression with variance modeling. The code demonstrates how to:
+orthogonality_constrained_pls
+This repository contains a MATLAB implementation of Orthogonality-Constrained Partial Least Squares (OC-PLS) regression. The method enhances selectivity by forcing the latent-variable space to be orthogonal to known interfering signals, making it particularly useful in chemometric modeling of vibrational spectroscopy data.
 
-Estimate noise variances from replicate measurements,
+📘 Citation
+If you use this code in your research, please cite:
 
-Optimize hyperparameters for a main GP (modeling the mean function),
+P. B. Skou, E. Hosseini, J. B. Ghasemi, A. K. Smilde, and C. E. Eskildsen
+Orthogonality constrained inverse regression to improve model selectivity and analyte predictions from vibrational spectroscopic measurements
+Analytica Chimica Acta, 2021, 1185:339073
+https://doi.org/10.1016/j.aca.2021.339073
 
-Train an auxiliary GP on noise variance to ensure strictly positive predictions,
+🔧 Usage
+Function call:
+[b, W, P, q, T] = pls_cons(X, y, LV, Sk);
 
-Combine the main GP’s predictive variance with the predicted noise variance for robust confidence intervals.
+Inputs:
 
-### v1.1 (2025-04-29)
+X: n×p matrix of mean-centered predictors
 
-- Removed external hyperparameter inputs (theta0_main, theta0_aux).  
-  Now GP_heteroscadiscity auto-computes initial guesses from the data.
-- Updated function signature and examples accordingly.
+y: n×1 mean-centered response vector
 
+LV: number of latent variables to extract
 
-Contents
-GP_heteroscadiscity.m
-The main MATLAB function that implements heteroscedastic GP regression with variance modeling.
+Sk: p×k matrix of known interfering signals
 
-**Usage**
+Outputs:
 
-[y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_hat] = ...
-    GP_heteroscadiscity(x, y, kernel, x_test);
+b: regression vector
 
-**Inputs:**
-x: Vector of training inputs (n×1)
-y: Vector of training outputs (n×1). Repeated x values indicate replicates
-kernel: Function handle for your chosen kernel (e.g., RBF)
-x_test: Vector of test inputs (m×1)
+W, P, q, T: standard PLS model matrices
 
-Example (Pseudo-Code)  
-% Define or load your data  
-x = [...];     % training inputs  
-y = [...];     % training outputs  
-x_test = [...];% test inputs  
+Example (pseudo-code):
+% Define or load your data
+x = [...]; % training inputs
+y = [...]; % training outputs
+x_test = [...]; % test inputs
 
-% Define your kernel function (example: RBF)  
-kernel = @(X1, X2, theta) rbfKernel(X1, X2, theta);  
+% Define your kernel, e.g. RBF
+kernel = @(X1,X2,θ) rbfKernel(X1,X2,θ);
 
-% Run heteroscedastic GP  
-[y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_hat] = ...
-    GP_heteroscadiscity(x, y, kernel, x_test);
+% Run OC-PLS
+[b, W, P, q, T] = pls_cons(x, y, LV, Sk);
 
-% Now y_hat is your predictive mean, CI_95 is half-width of 95% confidence intervals, etc.
-% (Make sure you have an appropriate kernel function, such as an RBF kernel, defined in your MATLAB path.)  
+🛠 Requirements
+MATLAB R2021a or later (should work on older versions too)
 
-Requirements  
-MATLAB (tested on version R2021a or later, but should work on older versions).  
+Optimization Toolbox (for fmincon) or equivalent optimizer
 
-Optimization Toolbox (for fmincon) or an equivalent method to minimize the negative log marginal likelihood.  
+📄 License
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0) license.
+You are free to share and adapt the material under the following terms:
+• Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made.
+• NonCommercial — You may not use the material for commercial purposes.
 
-License  
-This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). You are free to share and adapt the material under the following terms:
+Full license text: https://creativecommons.org/licenses/by-nc/4.0
 
-Attribution: You must give appropriate credit, provide a link to the license, and indicate if changes were made.  
-
-NonCommercial: You may not use the material for commercial purposes.  
-
-For the full license text, see: https://creativecommons.org/licenses/by-nc/4.0/  
-
-Author  
-Carl Emil Aae Eskildsen  
-Imperial College London  
-c.eskildsen@imperial.ac.uk  
+✉️ Author
+Carl Emil Aae Eskildsen
+Imperial College London
+c.eskildsen@imperial.ac.uk
