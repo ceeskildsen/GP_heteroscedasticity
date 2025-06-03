@@ -26,7 +26,7 @@ Call the function in MATLAB as follows:
 -`sigma_y2_test_hat` is an m-by-1 vector of predicted noise variances at test points.  
 
 ## Requirements: 
-MATLAB R2018a or later. Optimization Toolbox (for fmincon) or equivalent nonlinear optimizer.
+MATLAB R2018a or later. Optimization Toolbox (for fmincon) or equivalent nonlinear optimizer and the Statistics and Machine Learning Toolbox.
 
 ## License: 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
