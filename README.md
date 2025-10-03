@@ -1,4 +1,4 @@
-# GP_heteroscadiscity
+# GP_heteroscedasticity
 
 This repository provides a MATLAB implementation of heteroscedastic Gaussian Process regression with automatic noise variance modeling. The function estimates both predictive mean and uncertainty intervals for data exhibiting non-constant variance.
 
@@ -8,22 +8,22 @@ Estimates noise variances from replicate measurements. Optimizes hyperparameters
 ## Usage: 
 Call the function in MATLAB as follows: 
 ```matlab
-[y_hat, CI_95, theta_hat, aux_theta_hat, sigma_y2, sigma_y2_test_hat] = GP_heteroscadiscity(x, y, kernel, x_test);
+[y_hat, CI, theta_main_hat, theta_aux_hat, var_total] = GP_heteroscedasticity(x, y, kernel, x_test, alpha_error)
 ```
 
 ## Inputs: 
 -`x` is an n-by-1 vector of training inputs.  
 -`y` is an n-by-1 vector of training outputs (replicates allowed).  
 -`kernel` is a function handle with syntax kernel(X1, X2, theta).  
--`x_test` is an m-by-1 vector of test inputs.  
+-`x_test` is an m-by-1 vector of test inputs.
+-`alpha_error` is the significance level for confidence interval (e.g. 0.05 for 95%)
 
 ## Outputs: 
 -`y_hat` is an m-by-1 predictive mean at test points.  
--`CI_95` is an m-by-1 95 percent confidence interval half-width.  
--`theta_hat` is a 2-by-1 vector of hyperparameters for the main GP (length-scale; signal variance).  
--`aux_theta_hat` is a 3-by-1 vector of hyperparameters for the auxiliary GP (length-scale; signal variance; noise).  
--`sigma_y2` is an n-by-1 vector of estimated noise variances at training points.  
--`sigma_y2_test_hat` is an m-by-1 vector of predicted noise variances at test points.  
+-`CI` is an m-by-1 confidence interval half-width.  
+-`theta_main_hat` is a 2-by-1 vector of hyperparameters for the main GP (length-scale; signal variance).  
+-`theta_aux_hat` is a 3-by-1 vector of hyperparameters for the auxiliary GP (length-scale; signal variance; noise).  
+-`var_total` is an m-by-1 vector of total predictive variance (main GP + heteroscedastic noise, de-standardized).   
 
 ## Requirements: 
 MATLAB R2018a or later. Optimization Toolbox (for fmincon) or equivalent nonlinear optimizer and the Statistics and Machine Learning Toolbox.
