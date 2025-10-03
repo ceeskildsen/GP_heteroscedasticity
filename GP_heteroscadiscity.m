@@ -1,39 +1,42 @@
-% GP_heteroscadiscity.m
+% GP_heteroscedasticity.m
 % -------------------------------------------------------------------------
 % Heteroscedastic Gaussian Process Regression for data with non-constant variance.
-% Automatically optimizes both a “main” GP (for f(x)) and an “auxiliary” GP (for log σ²(x)).
-% This version fixes the row‐count bug, groups replicates properly when x has multiple columns,
-% and ensures theta_main_hat/theta_aux_hat are always defined.
+% Automatically optimizes both a "main" GP (for f(x)) and an "auxiliary" GP (for log sigma^2(x)).
+% This version fixes the row-count bug, groups replicates properly when x has multiple columns,
+% ensures theta_main_hat/theta_aux_hat are always defined,
+% excludes singleton x-values from auxiliary GP training,
+% enforces a longer aux-GP length-scale, and uses a soft-clamp + adaptive shrink on noise.
 %
 % USAGE:
-%   [y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_hat] = ...
-%       GP_heteroscadiscity(x, y, kernel, x_test)
+%   [y_hat, CI, theta_main_hat, theta_aux_hat, var_total] = ...
+%       GP_heteroscedasticity(x, y, kernel, x_test, alpha_error)
 %
 % INPUTS:
-%   x                - N×D matrix of training inputs (D may be ≥1).
-%   y                - N×1 vector of training outputs (replicates allowed).
-%   kernel           - Function handle: kernel(X1, X2, theta),
-%                      returns M×P Gram matrix if X1 is M×D and X2 is P×D.
-%                      theta = [ℓ; σ_f].
-%   x_test           - M×D matrix of test inputs.
+%   x                - N-by-D matrix of training inputs (D may be >=1)
+%   y                - N-by-1 vector of training outputs (replicates allowed)
+%   kernel           - Function handle: K = kernel(X1, X2, theta),
+%                      where theta = [l; sigma_f]
+%   x_test           - M-by-D matrix of test inputs
+%   alpha_error      - significance level for confidence interval (e.g. 0.05 for 95%)
 %
 % OUTPUTS:
-%   y_hat             - M×1 predictive mean (de‐standardized).
-%   CI_95             - M×1 95% confidence‐interval half‐width (de‐standardized).
-%   theta_main_hat    - [ℓ; σ_f] for the main GP.
-%   theta_aux_hat     - [ℓ_aux; σ_f_aux; σ_n_aux] for the auxiliary GP on log σ².
-%   sigma_y2          - N×1 estimated training‐noise variances (de‐standardized).
-%   sigma_y2_test_hat - M×1 predicted mean noise variance at x_test (de‐standardized).
+%   y_hat            - M-by-1 predictive mean (de-standardized)
+%   CI               - M-by-1 confidence-interval half-width (de-standardized)
+%   theta_main_hat   - [l; sigma_f] for the main GP
+%   theta_aux_hat    - [l_aux; sigma_f_aux; sigma_n_aux] for the auxiliary GP on log sigma^2
+%   var_total        - M-by-1 total predictive variance (main GP + heteroscedastic noise, de-standardized)
 %
 % AUTHOR:
 %   Carl Emil Aae Eskildsen, Imperial College London
 % REVISED BY:
-%   Carl Emil Aae Eskildsen, May 2025  (added ℓ_min and stable CI logic; fixed undefined theta_main_hat/theta_aux_hat, n=size(x,1); added data‐driven tau clamp + shrink weight w)
+%   Carl Emil Aae Eskildsen, May 2025  (added l_min and stable CI logic; fixed undefined theta_main_hat/theta_aux_hat; added tau clamp + shrink; excluded singletons from aux GP)
+%   Carl Emil Aae Eskildsen, July 2025 (added repCount; defined auxIdx; trained auxiliary GP on x_aux; enforced aux-GP length-scale floor; soft-clamp & adaptive shrink)
+%   Carl Emil Aae Eskildsen, Sept 2025 (simplified outputs: replaced sigma_y2 and sigma_y2_test_hat with var_total)
 %
 % LICENSE:
 %   MIT Licence
 % -------------------------------------------------------------------------
-function [y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_hat] = GP_heteroscadiscity(x, y, kernel, x_test)
+function [y_hat, CI, theta_main_hat, theta_aux_hat, var_total] = GP_heteroscedasticity(x, y, kernel, x_test, alpha_error)
 
     %% 1) Standardize inputs and outputs
     mu_x = mean(x, 1);
@@ -49,8 +52,8 @@ function [y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_h
     N = size(x_s, 1);
 
     %% 2) Estimate training noise variance from replicates
-    % Group by identical x_s rows
-    sigma_y = nan(N,1);
+    sigma_y  = nan(N,1);
+    repCount = nan(N,1);
     ux = unique(x_s, 'rows');
     for i = 1:size(ux, 1)
         idx = ismember(x_s, ux(i,:), 'rows');
@@ -58,9 +61,13 @@ function [y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_h
         if replicate_s < 1e-6
             replicate_s = 1e-6;
         end
-        sigma_y(idx) = replicate_s;
+        sigma_y(idx)  = replicate_s;
+        repCount(idx) = sum(idx);  % count replicates per x
     end
-    sigma_y2 = sigma_y.^2;   % N×1
+    sigma_y2 = sigma_y.^2;  % N-by-1 noise variances
+
+    % Which points have true replicates?
+    auxIdx = (repCount > 1);
 
     %% 3) Initial hyperparameter guess from data
     d     = pdist(x_s);
@@ -72,18 +79,14 @@ function [y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_h
     %% 4) Optimize main GP hyperparameters
     obj_main = @(th) negativeLogMarginalLikelihood_main(th, x_s, y_s, sigma_y, kernel);
 
-    % Enforce a minimum length-scale ℓ_min = multiplier * l0
-    multiplier = 2.5;          % increase to force smoother f(x)
+    multiplier = 2.5;
     l_min      = multiplier * l0;
     if l_min <= 0, l_min = 1e-2; end
 
-    lower_main = [l_min;  1e-5];    % [ℓ; σ_f]
-    upper_main = [2*l0;   1e5];     % [ℓ; σ_f]
+    lower_main = [l_min;  1e-5];
+    upper_main = [2*l0;   1e5];
 
-    opt = optimoptions('fmincon', ...
-                       'Algorithm','sqp', ...
-                       'Display','off', ...
-                       'MaxFunctionEvaluations', 1000);
+    opt = optimoptions('fmincon','Algorithm','sqp','Display','off','MaxFunctionEvaluations',1000);
 
     theta_main_hat = theta0_main;
     bestNL = inf;
@@ -107,23 +110,27 @@ function [y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_h
     L       = chol(K + 1e-5*eye(N), 'lower');
     alpha   = L' \ (L \ y_s);
 
-    x_test_s  = (x_test - mu_x) ./ sx;          
-    K_star    = kernel(x_s, x_test_s, theta_main_hat);  
+    x_test_s  = (x_test - mu_x) ./ sx;
+    K_star    = kernel(x_s, x_test_s, theta_main_hat);
     y_hat_s   = K_star' * alpha;
 
-    v       = L \ K_star;                   
-    K_test  = kernel(x_test_s, x_test_s, theta_main_hat);  
-    var_main = diag(K_test) - sum(v.^2, 1)';  
+    v       = L \ K_star;
+    K_test  = kernel(x_test_s, x_test_s, theta_main_hat);
+    var_main = diag(K_test) - sum(v.^2, 1)';
     var_main(var_main < 0) = 0;
 
-    %% 6) Train auxiliary GP on log‐variance of training noise
+    %% 6) Train auxiliary GP on log-variance of training noise
+    span = max(x_s,[],1) - min(x_s,[],1);    % 1-by-D
+    L_floor_aux = 0.5 * min(span);
+
     eps_log    = 1e-9;
-    y_aux      = log(sigma_y2 + eps_log);
+    x_aux      = x_s(auxIdx, :);
+    y_aux      = log(sigma_y2(auxIdx) + eps_log);
     theta0_aux = [l0; sf0; 0.1*sf0];
 
-    lower_aux = [l_min;  1e-5;    1e-9];
-    upper_aux = [2*l0;   1e5;     1e2];
-    obj_aux   = @(th) negativeLogMarginalLikelihood_aux_log(th, x_s, y_aux, kernel);
+    lower_aux = [L_floor_aux; 1e-5;    1e-9];
+    upper_aux = [2*l0;        1e5;     1e2];
+    obj_aux   = @(th) negativeLogMarginalLikelihood_aux_log(th, x_aux, y_aux, kernel);
 
     theta_aux_hat = theta0_aux;
     bestNL_a = inf;
@@ -141,10 +148,11 @@ function [y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_h
         end
     end
 
-    K_aux       = kernel(x_s, x_s, theta_aux_hat(1:2)) + diag(theta_aux_hat(3)^2 * ones(N,1));
-    L_aux       = chol(K_aux + 1e-5*eye(N), 'lower');
+    M = sum(auxIdx);
+    K_aux       = kernel(x_aux, x_aux, theta_aux_hat(1:2)) + diag(theta_aux_hat(3)^2 * ones(M,1));
+    L_aux       = chol(K_aux + 1e-5*eye(M), 'lower');
     alpha_aux   = L_aux' \ (L_aux \ y_aux);
-    K_aux_star  = kernel(x_s, x_test_s, theta_aux_hat(1:2));
+    K_aux_star  = kernel(x_aux, x_test_s, theta_aux_hat(1:2));
 
     logVar_test_mean = K_aux_star' * alpha_aux;
     v_aux            = L_aux \ K_aux_star;
@@ -158,34 +166,24 @@ function [y_hat, CI_95, theta_main_hat, theta_aux_hat, sigma_y2, sigma_y2_test_h
 
     sigma_y2_test_hat = E_sigma2_test;
 
-    %% 7) Combine variances for a stable CI (data‐driven clamp + shrinkage)
-    % ---------------------------------------------------------------------
-    % (a) Choose tau from the training noise variances (e.g., 90th percentile):
-    tau = prctile(sigma_y2, 90);
+    %% 7) Combine variances: soft-clamp + adaptive shrink
+    tau = prctile(sigma_y2, 95);
+    E_sigma2_clamped = tau .* (E_sigma2_test ./ (E_sigma2_test + tau));
+    w = 1 ./ (1 + E_sigma2_test / tau);
+    var_total_s = var_main + w .* E_sigma2_clamped;
 
-    % (b) Clamp the predicted test noise variances at tau:
-    E_sigma2_test_clamped = E_sigma2_test;
-    E_sigma2_test_clamped(E_sigma2_test_clamped > tau) = tau;
+    z = norminv(1-alpha_error/2);
+    CI_s = z .* sqrt(var_total_s);
 
-    % (c) Apply a shrinkage weight w to dampen the noise effect further:
-    w = 0.5;   % 0 ≤ w ≤ 1 (for example, 0.5 means "take half of the clamped noise variance")
-
-    % (d) Form the total variance as main‐GP variance + weighted & clamped noise:
-    var_total = var_main + w * E_sigma2_test_clamped;
-
-    % (e) Build a 95% confidence interval using z = norminv(0.975):
-    z       = norminv(0.975);
-    CI_95_s = z .* sqrt(var_total);
-
-    %% 8) De‐standardize outputs
-    y_hat             = y_hat_s * sy + mu_y;          
-    CI_95             = CI_95_s * sy;                
-    sigma_y2          = sigma_y2 * (sy^2);    
+    %% 8) De-standardize outputs
+    y_hat             = y_hat_s * sy + mu_y;
+    CI             = CI_s * sy;
+    sigma_y2          = sigma_y2 * (sy^2);
     sigma_y2_test_hat = sigma_y2_test_hat * (sy^2);
+    var_total = var_total_s * (sy^2);
 end
 
-%%-----------------------------------------------------------------------
-%% Helper: Negative log marginal likelihood for main GP
+% ------------------------------------------------------------------------
 function nlml = negativeLogMarginalLikelihood_main(theta, x, y, sigma_y, kernel)
     N = size(x,1);
     K = kernel(x, x, theta) + diag(sigma_y.^2) + 1e-5*eye(N);
@@ -194,11 +192,10 @@ function nlml = negativeLogMarginalLikelihood_main(theta, x, y, sigma_y, kernel)
     nlml = 0.5 * (y' * alpha) + sum(log(diag(L))) + 0.5 * N * log(2*pi);
 end
 
-%%-----------------------------------------------------------------------
-%% Helper: Negative log marginal likelihood for auxiliary GP in log space
-function nlml = negativeLogMarginalLikelihood_aux_log(theta, x, y_aux, kernel)
-    N      = size(x,1);
-    K_aux  = kernel(x, x, theta(1:2)) + diag(theta(3)^2 * ones(N,1)) + 1e-5*eye(N);
+% ------------------------------------------------------------------------
+function nlml = negativeLogMarginalLikelihood_aux_log(theta, x_aux, y_aux, kernel)
+    N      = size(x_aux,1);
+    K_aux  = kernel(x_aux, x_aux, theta(1:2)) + diag(theta(3)^2 * ones(N,1)) + 1e-5*eye(N);
     L_aux  = chol(K_aux, 'lower');
     alpha_aux = L_aux' \ (L_aux \ y_aux);
     nlml   = 0.5 * (y_aux' * alpha_aux) + sum(log(diag(L_aux))) + 0.5 * N * log(2*pi);
